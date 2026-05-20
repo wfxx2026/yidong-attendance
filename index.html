@@ -19,6 +19,7 @@
         .btn-info { background: #17a2b8; color: white; } .btn-info:hover { background: #138496; }
         .btn-warning { background: #ffc107; color: #212529; } .btn-warning:hover { background: #e0a800; }
         .btn-danger { background: #dc3545; color: white; } .btn-danger:hover { background: #c82333; }
+        .btn-success { background: #28a745; color: white; } .btn-success:hover { background: #218838; }
         .search-box { padding: 7px 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 13px; width: 160px; }
         .legend { display: flex; gap: 15px; align-items: center; font-size: 13px; }
         .legend-item { display: flex; align-items: center; gap: 4px; }
@@ -79,7 +80,28 @@
         .batch-bar { display: none; padding: 10px 30px; background: #e3f2fd; border-bottom: 1px solid #bbdefb; align-items: center; gap: 15px; }
         .batch-bar.active { display: flex; }
         .batch-bar span { font-size: 13px; color: #1565c0; }
-        @media print { body { padding: 0; background: white; } .toolbar, .modal-overlay, .toast, .summary-panel, .batch-bar { display: none !important; } .container { box-shadow: none; border-radius: 0; } .table-wrapper { max-height: none; overflow: visible; } .attendance-cell:hover { transform: none; box-shadow: none; } }
+        
+        /* 每日出勤率面板样式 */
+        .daily-rate-panel { display: none; padding: 15px 30px; background: #f0f7f0; border-bottom: 2px solid #2d8a4e; }
+        .daily-rate-panel.active { display: block; }
+        .daily-rate-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .daily-rate-header h3 { color: #1a5f2a; font-size: 16px; }
+        .daily-rate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 5px; }
+        .daily-rate-card { background: white; border-radius: 6px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid #2d8a4e; }
+        .daily-rate-card.weekend { border-left-color: #999; opacity: 0.7; }
+        .daily-rate-card .date-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .daily-rate-card .date-label { font-size: 13px; font-weight: 600; color: #333; }
+        .daily-rate-card .weekend-tag { font-size: 11px; color: #999; background: #f5f5f5; padding: 2px 6px; border-radius: 3px; }
+        .daily-rate-card .rate-bar-container { display: flex; align-items: center; gap: 8px; }
+        .daily-rate-card .rate-bar { flex: 1; height: 18px; background: #e9ecef; border-radius: 9px; overflow: hidden; position: relative; }
+        .daily-rate-card .rate-bar-fill { height: 100%; border-radius: 9px; transition: width 0.5s ease; }
+        .daily-rate-card .rate-bar-fill.high { background: linear-gradient(90deg, #28a745, #2d8a4e); }
+        .daily-rate-card .rate-bar-fill.medium { background: linear-gradient(90deg, #ffc107, #ff9800); }
+        .daily-rate-card .rate-bar-fill.low { background: linear-gradient(90deg, #dc3545, #c0392b); }
+        .daily-rate-card .rate-text { font-size: 13px; font-weight: bold; color: #333; min-width: 45px; text-align: right; }
+        .daily-rate-card .rate-detail { font-size: 11px; color: #666; margin-top: 4px; }
+        
+        @media print { body { padding: 0; background: white; } .toolbar, .modal-overlay, .toast, .summary-panel, .batch-bar, .daily-rate-panel { display: none !important; } .container { box-shadow: none; border-radius: 0; } .table-wrapper { max-height: none; overflow: visible; } .attendance-cell:hover { transform: none; box-shadow: none; } }
     </style>
 </head>
 <body>
@@ -103,6 +125,7 @@
                     <div class="legend-item"><div class="legend-symbol" style="background:#ffe0b2;color:#e65100;">○</div><span>早退</span></div>
                     <div class="legend-item"><div class="legend-symbol" style="background:#f8d7da;color:#721c24;">×</div><span>缺勤</span></div>
                 </div>
+                <button class="btn btn-success" onclick="toggleDailyRate()">📅 日统计</button>
                 <button class="btn btn-info" onclick="toggleSummary()">📊 统计</button>
                 <button class="btn btn-warning" onclick="exportJSON()">💾 导出</button>
                 <button class="btn btn-warning" onclick="exportCSV()">📄 CSV</button>
@@ -118,6 +141,13 @@
             <button class="btn btn-primary" onclick="batchMark('present')">全出勤</button>
             <button class="btn btn-secondary" onclick="batchMark('absent')">全缺勤</button>
             <button class="btn btn-secondary" onclick="toggleBatchMode()">取消</button>
+        </div>
+        <div class="daily-rate-panel" id="dailyRatePanel">
+            <div class="daily-rate-header">
+                <h3>📅 每日出勤率统计（按工作日计算）</h3>
+                <span style="font-size:12px;color:#666;">出勤率 = 出勤人数 / 总人数（含上午+下午）</span>
+            </div>
+            <div class="daily-rate-grid" id="dailyRateGrid"></div>
         </div>
         <div class="summary-panel" id="summaryPanel">
             <div class="summary-grid" id="summaryGrid"></div>
@@ -441,6 +471,75 @@ function batchMark(status) {
     });
     saveData(); renderBody();
     showToast(`已为${students.length}名学员的${count/2}个工作日标记${STATUS_CONFIG[status].label}`);
+}
+
+/* ========== 每日出勤率功能 ========== */
+function toggleDailyRate() {
+    const panel = document.getElementById('dailyRatePanel');
+    panel.classList.toggle('active');
+    if (panel.classList.contains('active')) {
+        updateDailyRate();
+        showToast('已展开每日出勤率面板');
+    } else {
+        showToast('已收起每日出勤率面板');
+    }
+}
+
+function updateDailyRate() {
+    const grid = document.getElementById('dailyRateGrid');
+    const activeStudents = students.filter(s => s.name && s.name.trim() !== '').length || students.length;
+    
+    let html = '';
+    dates.forEach(d => {
+        let presentCount = 0, totalSlots = 0;
+        
+        students.forEach(s => {
+            if (!s.name) return; // 跳过未命名学员
+            const am = attendanceData[`${s.id}_${d.date}_am`];
+            const pm = attendanceData[`${s.id}_${d.date}_pm`];
+            
+            // 上午
+            if (am === 'present' || am === 'late' || am === 'early') presentCount++;
+            if (am) totalSlots++;
+            else if (!d.isWeekend) totalSlots++; // 未标记也算在分母中（工作日默认应出勤）
+            
+            // 下午
+            if (pm === 'present' || pm === 'late' || pm === 'early') presentCount++;
+            if (pm) totalSlots++;
+            else if (!d.isWeekend) totalSlots++;
+        });
+        
+        const rate = totalSlots > 0 ? (presentCount / totalSlots * 100) : 0;
+        const rateFixed = rate.toFixed(1);
+        
+        let barClass = 'high';
+        if (rate < 60) barClass = 'low';
+        else if (rate < 90) barClass = 'medium';
+        
+        const weekendClass = d.isWeekend ? 'weekend' : '';
+        const weekendTag = d.isWeekend ? '<span class="weekend-tag">周末</span>' : '';
+        const monthStr = d.month + '月';
+        
+        html += `
+            <div class="daily-rate-card ${weekendClass}">
+                <div class="date-info">
+                    <span class="date-label">${monthStr}${d.day}日 星期${d.weekday}</span>
+                    ${weekendTag}
+                </div>
+                <div class="rate-bar-container">
+                    <div class="rate-bar">
+                        <div class="rate-bar-fill ${barClass}" style="width: ${rate}%;"></div>
+                    </div>
+                    <span class="rate-text">${rateFixed}%</span>
+                </div>
+                <div class="rate-detail">
+                    出勤 ${presentCount} / ${totalSlots} 人次
+                </div>
+            </div>
+        `;
+    });
+    
+    grid.innerHTML = html;
 }
 
 function toggleSummary() {
