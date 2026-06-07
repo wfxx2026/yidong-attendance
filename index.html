@@ -20,6 +20,8 @@
         .btn-warning { background: #ffc107; color: #212529; } .btn-warning:hover { background: #e0a800; }
         .btn-danger { background: #dc3545; color: white; } .btn-danger:hover { background: #c82333; }
         .btn-success { background: #28a745; color: white; } .btn-success:hover { background: #218838; }
+        .btn-purple { background: #6f42c1; color: white; } .btn-purple:hover { background: #5a32a3; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .search-box { padding: 7px 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 13px; width: 160px; }
         .legend { display: flex; gap: 15px; align-items: center; font-size: 13px; }
         .legend-item { display: flex; align-items: center; gap: 4px; }
@@ -38,6 +40,8 @@
         .student-name { width: 90px; min-width: 90px; max-width: 90px; }
         .student-name input { width: 100%; border: none; padding: 5px 2px; text-align: center; font-size: 13px; background: transparent; outline: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .student-name input:focus { background: #e8f5e9; }
+        .student-name input:disabled { background: #f5f5f5; color: #666; cursor: default; }
+        .student-name .readonly-name { display: block; padding: 5px 2px; text-align: center; font-size: 13px; }
         .date-header { min-width: 32px; font-size: 11px; }
         .date-header .day-num { font-size: 13px; font-weight: bold; }
         .date-header .weekday { font-size: 10px; opacity: 0.9; }
@@ -50,6 +54,8 @@
         .attendance-cell.absent { background: #f8d7da; color: #721c24; }
         .attendance-cell.weekend { background: #f5f5f5; cursor: default; }
         .attendance-cell.weekend:hover { transform: none; box-shadow: none; background: #f5f5f5; }
+        .attendance-cell.readonly { cursor: default; }
+        .attendance-cell.readonly:hover { transform: none; box-shadow: none; background: transparent; }
         .attendance-cell .cell-content { display: flex; align-items: center; justify-content: center; height: 100%; font-weight: bold; font-size: 15px; }
         .stats-row td { background: #e8f5e9; font-weight: 600; padding: 6px; font-size: 11px; }
         .stats-row .sticky-col, .stats-row .sticky-col-2, .stats-row .sticky-col-3 { background: #c8e6c9; }
@@ -80,8 +86,19 @@
         .batch-bar { display: none; padding: 10px 30px; background: #e3f2fd; border-bottom: 1px solid #bbdefb; align-items: center; gap: 15px; }
         .batch-bar.active { display: flex; }
         .batch-bar span { font-size: 13px; color: #1565c0; }
-        
-        /* 每日出勤率面板样式 */
+        .cloud-panel { display: none; padding: 15px 30px; background: #f3e5f5; border-bottom: 2px solid #6f42c1; }
+        .cloud-panel.active { display: block; }
+        .cloud-panel h3 { color: #6f42c1; font-size: 16px; margin-bottom: 12px; }
+        .cloud-form { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .cloud-form input[type="text"], .cloud-form input[type="password"] { padding: 8px 12px; border: 1px solid #ce93d8; border-radius: 4px; font-size: 13px; min-width: 300px; }
+        .cloud-form input::placeholder { color: #999; }
+        .share-link-box { display: none; margin-top: 12px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #ce93d8; }
+        .share-link-box.active { display: block; }
+        .share-link-box label { font-size: 13px; color: #6f42c1; font-weight: 600; display: block; margin-bottom: 6px; }
+        .share-link-input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-family: monospace; background: #f8f9fa; color: #333; }
+        .readonly-banner { display: none; padding: 10px 30px; background: #fff3cd; border-bottom: 2px solid #ffc107; color: #856404; font-size: 14px; text-align: center; }
+        .readonly-banner.active { display: block; }
+        .readonly-banner a { color: #856404; font-weight: 600; }
         .daily-rate-panel { display: none; padding: 15px 30px; background: #f0f7f0; border-bottom: 2px solid #2d8a4e; }
         .daily-rate-panel.active { display: block; }
         .daily-rate-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -100,9 +117,11 @@
         .daily-rate-card .rate-bar-fill.low { background: linear-gradient(90deg, #dc3545, #c0392b); }
         .daily-rate-card .rate-text { font-size: 13px; font-weight: bold; color: #333; min-width: 45px; text-align: right; }
         .daily-rate-card .rate-detail { font-size: 11px; color: #666; margin-top: 4px; }
-        
-        @media print { body { padding: 0; background: white; } .toolbar, .modal-overlay, .toast, .summary-panel, .batch-bar, .daily-rate-panel { display: none !important; } .container { box-shadow: none; border-radius: 0; } .table-wrapper { max-height: none; overflow: visible; } .attendance-cell:hover { transform: none; box-shadow: none; } }
+        .edit-only { display: flex; gap: 10px; align-items: center; }
+        .edit-only.hidden { display: none !important; }
+        @media print { body { padding: 0; background: white; } .toolbar, .modal-overlay, .toast, .summary-panel, .batch-bar, .daily-rate-panel, .cloud-panel, .readonly-banner, .edit-only { display: none !important; } .container { box-shadow: none; border-radius: 0; } .table-wrapper { max-height: none; overflow: visible; } .attendance-cell:hover { transform: none; box-shadow: none; } }
     </style>
+<base target="_blank">
 </head>
 <body>
     <div class="container">
@@ -111,11 +130,16 @@
             <div class="subtitle">班次：2026年益东煤矿救护队培训班 &nbsp;&nbsp;|&nbsp;&nbsp; 考勤员：__________</div>
             <div class="subtitle" style="margin-top:5px;">考勤周期：2026年5月15日 ～ 2026年8月12日（共90天）</div>
         </div>
-        <div class="toolbar">
+        <div class="readonly-banner" id="readonlyBanner">
+            🔒 当前为<strong>只读查看模式</strong>，数据来自云端共享。如需编辑，请<a href="#" onclick="exitReadonly()">点击此处返回编辑模式</a>。
+        </div>
+        <div class="toolbar" id="mainToolbar">
             <div class="toolbar-left">
-                <button class="btn btn-primary" onclick="addStudent()">➕ 添加学员</button>
-                <button class="btn btn-secondary" onclick="removeStudent()">➖ 删除学员</button>
-                <button class="btn btn-info" onclick="toggleBatchMode()">📋 批量</button>
+                <div class="edit-only" id="editGroupLeft">
+                    <button class="btn btn-primary" onclick="addStudent()">➕ 添加学员</button>
+                    <button class="btn btn-secondary" onclick="removeStudent()">➖ 删除学员</button>
+                    <button class="btn btn-info" onclick="toggleBatchMode()">📋 批量</button>
+                </div>
                 <input type="text" class="search-box" id="searchName" placeholder="搜索学员姓名..." oninput="filterStudents()">
             </div>
             <div class="toolbar-right">
@@ -125,12 +149,34 @@
                     <div class="legend-item"><div class="legend-symbol" style="background:#ffe0b2;color:#e65100;">○</div><span>早退</span></div>
                     <div class="legend-item"><div class="legend-symbol" style="background:#f8d7da;color:#721c24;">×</div><span>缺勤</span></div>
                 </div>
+                <div class="edit-only" id="editGroupRight">
+                    <button class="btn btn-purple" onclick="toggleCloudPanel()">☁️ 云端分享</button>
+                    <button class="btn btn-success" onclick="importFromJSON()">📂 导入备份</button>
+                    <button class="btn btn-danger" onclick="clearAllData()">🗑️ 清空</button>
+                </div>
                 <button class="btn btn-success" onclick="toggleDailyRate()">📅 日统计</button>
                 <button class="btn btn-info" onclick="toggleSummary()">📊 统计</button>
                 <button class="btn btn-warning" onclick="exportJSON()">💾 导出</button>
                 <button class="btn btn-warning" onclick="exportCSV()">📄 CSV</button>
                 <button class="btn btn-secondary" onclick="window.print()">🖨️ 打印</button>
-                <button class="btn btn-danger" onclick="clearAllData()">🗑️ 清空</button>
+            </div>
+        </div>
+        <div class="cloud-panel" id="cloudPanel">
+            <h3>☁️ 云端分享设置（使用 GitHub Gist）</h3>
+            <div class="cloud-form">
+                <input type="password" id="githubToken" placeholder="输入 GitHub Personal Access Token（用于上传）..." title="在 GitHub Settings -> Developer settings -> Personal access tokens 中生成">
+                <button class="btn btn-purple" onclick="uploadToGist()">📤 上传到云端</button>
+                <button class="btn btn-info" onclick="loadFromGist()">📥 从云端加载</button>
+                <button class="btn btn-secondary" onclick="toggleCloudPanel()">关闭</button>
+            </div>
+            <div style="margin-top:8px;font-size:12px;color:#666;">
+                💡 没有 Token？可以先用"导出JSON"功能手动上传到 <a href="https://gist.github.com" target="_blank" style="color:#6f42c1;">gist.github.com</a>，然后分享 Gist ID 的链接。
+            </div>
+            <div class="share-link-box" id="shareLinkBox">
+                <label>📎 分享链接（他人可通过此链接查看）：</label>
+                <input type="text" class="share-link-input" id="shareLink" readonly onclick="this.select()">
+                <button class="btn btn-primary" style="margin-top:8px;" onclick="copyShareLink()">📋 复制链接</button>
+                <span id="copyTip" style="margin-left:10px;font-size:13px;color:#28a745;display:none;">已复制！</span>
             </div>
         </div>
         <div class="batch-bar" id="batchBar">
@@ -158,12 +204,12 @@
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
-        <div class="note-section">
+        <div class="note-section" id="noteSection">
             <strong>考勤说明：</strong>出勤√ &nbsp;&nbsp; 迟到△ &nbsp;&nbsp; 早退○ &nbsp;&nbsp; 缺勤× &nbsp;&nbsp;&nbsp;&nbsp;
             学员参加学习，缺勤超过总课时三分之一者不得参加考试。 &nbsp;&nbsp;&nbsp;&nbsp;
             <span style="color:#2196f3;">● 蓝色边框标记为今日日期</span> &nbsp;&nbsp;
             <span style="color:#c0392b;">红色表头为周末</span> &nbsp;&nbsp;
-            <span style="color:#666;">点击单元格即可标记考勤状态，数据自动保存到浏览器</span>
+            <span style="color:#666;" id="saveHint">点击单元格即可标记考勤状态，数据自动保存到浏览器</span>
         </div>
     </div>
     <div class="modal-overlay" id="attendanceModal">
@@ -319,13 +365,126 @@ const DEFAULT_STUDENTS = [
   { id: 34, name: '王虎' },
   { id: 35, name: '王莹军' }
 ];
-let students = JSON.parse(localStorage.getItem('yidong_students_v2')) || DEFAULT_STUDENTS;
+
+let students = JSON.parse(localStorage.getItem('yidong_students_v2')) || JSON.parse(JSON.stringify(DEFAULT_STUDENTS));
 let attendanceData = JSON.parse(localStorage.getItem('yidong_attendance_v2')) || {};
 let currentCell = null;
 let selectedStatus = null;
 let batchMode = false;
+let isReadonly = false;
+let currentGistId = null;
 
-function init() { renderTable(); loadData(); }
+function init() {
+    // 数据迁移：检查并合并可能存在的旧键名数据
+    migrateData();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const gistId = urlParams.get('gist');
+    if (gistId) {
+        isReadonly = true;
+        currentGistId = gistId;
+        enterReadonlyMode();
+        loadFromGistById(gistId);
+    } else {
+        renderTable();
+        loadData();
+    }
+}
+
+// 数据迁移函数：自动检测并合并旧版本数据
+function migrateData() {
+    const possibleKeys = [
+        { students: 'yidong_students', attendance: 'yidong_attendance' },
+        { students: 'yidong_students_v1', attendance: 'yidong_attendance_v1' },
+        { students: 'students', attendance: 'attendance' },
+    ];
+
+    let currentStudents = localStorage.getItem('yidong_students_v2');
+    let currentAttendance = localStorage.getItem('yidong_attendance_v2');
+    let migrated = false;
+
+    // 如果当前键没有数据，尝试从旧键迁移
+    if (!currentStudents) {
+        for (const keys of possibleKeys) {
+            const oldStudents = localStorage.getItem(keys.students);
+            if (oldStudents) {
+                try {
+                    JSON.parse(oldStudents); // 验证是合法JSON
+                    localStorage.setItem('yidong_students_v2', oldStudents);
+                    migrated = true;
+                    console.log('已迁移学员数据 from:', keys.students);
+                    break;
+                } catch (e) {}
+            }
+        }
+    }
+
+    if (!currentAttendance) {
+        for (const keys of possibleKeys) {
+            const oldAttendance = localStorage.getItem(keys.attendance);
+            if (oldAttendance) {
+                try {
+                    JSON.parse(oldAttendance);
+                    localStorage.setItem('yidong_attendance_v2', oldAttendance);
+                    migrated = true;
+                    console.log('已迁移考勤数据 from:', keys.attendance);
+                    break;
+                } catch (e) {}
+            }
+        }
+    }
+
+    if (migrated) {
+        showToast('✅ 已自动迁移历史数据');
+    }
+}
+
+// 从JSON备份文件恢复数据
+function importFromJSON() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                if (data.students && data.attendance) {
+                    if (confirm(`确定要导入备份数据吗？这将覆盖当前 ${students.length} 名学员的数据。`)) {
+                        students = data.students;
+                        attendanceData = data.attendance || {};
+                        saveData();
+                        renderTable();
+                        renderBody();
+                        showToast('✅ 数据恢复成功！');
+                    }
+                } else {
+                    throw new Error('文件格式不正确，缺少 students 或 attendance 数据');
+                }
+            } catch (err) {
+                showToast('❌ 导入失败：' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+function enterReadonlyMode() {
+    document.getElementById('readonlyBanner').classList.add('active');
+    document.getElementById('editGroupLeft').classList.add('hidden');
+    document.getElementById('editGroupRight').classList.add('hidden');
+    document.getElementById('noteSection').innerHTML = 
+        '<strong>🔒 只读查看模式</strong> &nbsp;&nbsp; 您正在查看他人分享的考勤数据，无法编辑。' +
+        '&nbsp;&nbsp; <a href="#" onclick="exitReadonly()" style="color:#2196f3;">返回编辑模式</a>' +
+        '&nbsp;&nbsp; | &nbsp;&nbsp; 可以正常使用统计、导出、打印功能';
+}
+
+function exitReadonly() {
+    window.location.href = window.location.pathname;
+}
 
 function renderTable() {
     const thead = document.getElementById('tableHead');
@@ -349,7 +508,13 @@ function renderBody() {
     students.forEach((student, idx) => {
         bodyHTML += '<tr>';
         bodyHTML += `<td class="sticky-col" rowspan="2">${idx + 1}</td>`;
-        bodyHTML += `<td class="sticky-col-2 student-name" rowspan="2"><input type="text" value="${student.name}" onchange="updateName(${student.id}, this.value)" placeholder="姓名" title="${student.name}"></td>`;
+        let nameCell;
+        if (isReadonly) {
+            nameCell = `<span class="readonly-name">${student.name || ''}</span>`;
+        } else {
+            nameCell = `<input type="text" value="${student.name}" onchange="updateName(${student.id}, this.value)" placeholder="姓名" title="${student.name}">`;
+        }
+        bodyHTML += `<td class="sticky-col-2 student-name" rowspan="2">${nameCell}</td>`;
         bodyHTML += '<td class="sticky-col-3">上午</td>';
         dates.forEach((d, di) => {
             const cellKey = `${student.id}_${d.date}_am`;
@@ -358,7 +523,9 @@ function renderBody() {
             const todayClass = d.isToday ? 'today-highlight' : '';
             const statusClass = status ? STATUS_CONFIG[status].class : '';
             const symbol = status ? STATUS_CONFIG[status].symbol : '';
-            bodyHTML += `<td class="attendance-cell ${weekendClass} ${todayClass} ${statusClass}" onclick="handleCellClick('${cellKey}', this)" title="${student.name || '学员'+(idx+1)} ${d.date} 上午"><div class="cell-content">${symbol}</div></td>`;
+            const readonlyClass = isReadonly ? 'readonly' : '';
+            const clickAttr = isReadonly ? '' : `onclick="handleCellClick('${cellKey}', this)"`;
+            bodyHTML += `<td class="attendance-cell ${weekendClass} ${todayClass} ${statusClass} ${readonlyClass}" ${clickAttr} title="${student.name || '学员'+(idx+1)} ${d.date} 上午"><div class="cell-content">${symbol}</div></td>`;
         });
         bodyHTML += '<td rowspan="2"></td></tr>';
         bodyHTML += '<tr><td class="sticky-col-3">下午</td>';
@@ -369,7 +536,9 @@ function renderBody() {
             const todayClass = d.isToday ? 'today-highlight' : '';
             const statusClass = status ? STATUS_CONFIG[status].class : '';
             const symbol = status ? STATUS_CONFIG[status].symbol : '';
-            bodyHTML += `<td class="attendance-cell ${weekendClass} ${todayClass} ${statusClass}" onclick="handleCellClick('${cellKey}', this)" title="${student.name || '学员'+(idx+1)} ${d.date} 下午"><div class="cell-content">${symbol}</div></td>`;
+            const readonlyClass = isReadonly ? 'readonly' : '';
+            const clickAttr = isReadonly ? '' : `onclick="handleCellClick('${cellKey}', this)"`;
+            bodyHTML += `<td class="attendance-cell ${weekendClass} ${todayClass} ${statusClass} ${readonlyClass}" ${clickAttr} title="${student.name || '学员'+(idx+1)} ${d.date} 下午"><div class="cell-content">${symbol}</div></td>`;
         });
         bodyHTML += '</tr>';
     });
@@ -383,23 +552,27 @@ function renderBody() {
 }
 
 function handleCellClick(cellKey, cellElement) {
+    if (isReadonly) return;
     if (cellElement.classList.contains('weekend')) return;
     if (batchMode) { attendanceData[cellKey] = 'present'; saveData(); renderBody(); return; }
     openModal(cellKey, cellElement);
 }
 
 function updateName(id, name) {
+    if (isReadonly) return;
     const student = students.find(s => s.id === id);
     if (student) { student.name = name.trim(); saveData(); showToast('姓名已保存'); }
 }
 
 function addStudent() {
+    if (isReadonly) return;
     const newId = Math.max(...students.map(s => s.id), 0) + 1;
     students.push({ id: newId, name: '' });
     saveData(); renderBody(); showToast('已添加新学员');
 }
 
 function removeStudent() {
+    if (isReadonly) return;
     if (students.length <= 1) { showToast('至少保留一名学员'); return; }
     const lastStudent = students[students.length - 1];
     Object.keys(attendanceData).forEach(key => { if (key.startsWith(`${lastStudent.id}_`)) delete attendanceData[key]; });
@@ -450,12 +623,14 @@ function clearCell() {
 function closeModal() { document.getElementById('attendanceModal').classList.remove('active'); currentCell = null; selectedStatus = null; }
 
 function toggleBatchMode() {
+    if (isReadonly) return;
     batchMode = !batchMode;
     document.getElementById('batchBar').classList.toggle('active', batchMode);
     showToast(batchMode ? '批量模式：点击单元格直接标记出勤' : '已退出批量模式');
 }
 
 function batchMark(status) {
+    if (isReadonly) return;
     const start = document.getElementById('batchStart').value;
     const end = document.getElementById('batchEnd').value;
     if (!start || !end) { showToast('请选择日期范围'); return; }
@@ -473,72 +648,37 @@ function batchMark(status) {
     showToast(`已为${students.length}名学员的${count/2}个工作日标记${STATUS_CONFIG[status].label}`);
 }
 
-/* ========== 每日出勤率功能 ========== */
 function toggleDailyRate() {
     const panel = document.getElementById('dailyRatePanel');
     panel.classList.toggle('active');
-    if (panel.classList.contains('active')) {
-        updateDailyRate();
-        showToast('已展开每日出勤率面板');
-    } else {
-        showToast('已收起每日出勤率面板');
-    }
+    if (panel.classList.contains('active')) { updateDailyRate(); showToast('已展开每日出勤率面板'); }
+    else { showToast('已收起每日出勤率面板'); }
 }
 
 function updateDailyRate() {
     const grid = document.getElementById('dailyRateGrid');
     const activeStudents = students.filter(s => s.name && s.name.trim() !== '').length || students.length;
-    
     let html = '';
     dates.forEach(d => {
         let presentCount = 0, totalSlots = 0;
-        
         students.forEach(s => {
-            if (!s.name) return; // 跳过未命名学员
+            if (!s.name) return;
             const am = attendanceData[`${s.id}_${d.date}_am`];
             const pm = attendanceData[`${s.id}_${d.date}_pm`];
-            
-            // 上午
             if (am === 'present' || am === 'late' || am === 'early') presentCount++;
-            if (am) totalSlots++;
-            else if (!d.isWeekend) totalSlots++; // 未标记也算在分母中（工作日默认应出勤）
-            
-            // 下午
+            if (am) totalSlots++; else if (!d.isWeekend) totalSlots++;
             if (pm === 'present' || pm === 'late' || pm === 'early') presentCount++;
-            if (pm) totalSlots++;
-            else if (!d.isWeekend) totalSlots++;
+            if (pm) totalSlots++; else if (!d.isWeekend) totalSlots++;
         });
-        
         const rate = totalSlots > 0 ? (presentCount / totalSlots * 100) : 0;
         const rateFixed = rate.toFixed(1);
-        
         let barClass = 'high';
-        if (rate < 60) barClass = 'low';
-        else if (rate < 90) barClass = 'medium';
-        
+        if (rate < 60) barClass = 'low'; else if (rate < 90) barClass = 'medium';
         const weekendClass = d.isWeekend ? 'weekend' : '';
         const weekendTag = d.isWeekend ? '<span class="weekend-tag">周末</span>' : '';
         const monthStr = d.month + '月';
-        
-        html += `
-            <div class="daily-rate-card ${weekendClass}">
-                <div class="date-info">
-                    <span class="date-label">${monthStr}${d.day}日 星期${d.weekday}</span>
-                    ${weekendTag}
-                </div>
-                <div class="rate-bar-container">
-                    <div class="rate-bar">
-                        <div class="rate-bar-fill ${barClass}" style="width: ${rate}%;"></div>
-                    </div>
-                    <span class="rate-text">${rateFixed}%</span>
-                </div>
-                <div class="rate-detail">
-                    出勤 ${presentCount} / ${totalSlots} 人次
-                </div>
-            </div>
-        `;
+        html += `<div class="daily-rate-card ${weekendClass}"><div class="date-info"><span class="date-label">${monthStr}${d.day}日 星期${d.weekday}</span>${weekendTag}</div><div class="rate-bar-container"><div class="rate-bar"><div class="rate-bar-fill ${barClass}" style="width: ${rate}%;"></div></div><span class="rate-text">${rateFixed}%</span></div><div class="rate-detail">出勤 ${presentCount} / ${totalSlots} 人次</div></div>`;
     });
-    
     grid.innerHTML = html;
 }
 
@@ -596,9 +736,10 @@ function exportJSON() {
 }
 
 function exportCSV() {
-    let csv = '\uFEFF序号,姓名';
+    let csv = '﻿序号,姓名';
     dates.forEach(d => { csv += `,${d.date}上午,${d.date}下午`; });
-    csv += '\n';
+    csv += '
+';
     students.forEach((s, idx) => {
         csv += `${idx+1},${s.name || ''}`;
         dates.forEach(d => {
@@ -606,7 +747,8 @@ function exportCSV() {
             const pm = attendanceData[`${s.id}_${d.date}_pm`];
             csv += `,${am ? STATUS_CONFIG[am].symbol : ''},${pm ? STATUS_CONFIG[pm].symbol : ''}`;
         });
-        csv += '\n';
+        csv += '
+';
     });
     downloadFile(csv, `益东考勤_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;');
     showToast('CSV表格已导出');
@@ -620,6 +762,7 @@ function downloadFile(content, filename, mimeType) {
 }
 
 function clearAllData() {
+    if (isReadonly) return;
     if (!confirm('确定要清空所有考勤数据吗？此操作不可恢复！')) return;
     attendanceData = {};
     students = JSON.parse(JSON.stringify(DEFAULT_STUDENTS));
@@ -627,22 +770,123 @@ function clearAllData() {
 }
 
 function saveData() {
+    if (isReadonly) return;
     localStorage.setItem('yidong_students_v2', JSON.stringify(students));
     localStorage.setItem('yidong_attendance_v2', JSON.stringify(attendanceData));
 }
 
 function loadData() { renderBody(); }
 
+function toggleCloudPanel() {
+    const panel = document.getElementById('cloudPanel');
+    panel.classList.toggle('active');
+}
+
+async function uploadToGist() {
+    const token = document.getElementById('githubToken').value.trim();
+    if (!token) { showToast('请输入 GitHub Token'); return; }
+    showToast('正在上传到云端...');
+    const data = {
+        exportTime: new Date().toLocaleString('zh-CN'),
+        className: '2026年益东煤矿救护队培训班',
+        period: '2026年5月15日 ～ 2026年8月12日',
+        students: students,
+        attendance: attendanceData,
+        dates: dates.map(d => d.date)
+    };
+    try {
+        const response = await fetch('https://api.github.com/gists', {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify({
+                description: '益东煤矿考勤数据',
+                public: true,
+                files: { 'attendance.json': { content: JSON.stringify(data, null, 2) } }
+            })
+        });
+        if (!response.ok) { const err = await response.json(); throw new Error(err.message || '上传失败'); }
+        const result = await response.json();
+        const gistId = result.id;
+        currentGistId = gistId;
+        const shareUrl = `${window.location.origin}${window.location.pathname}?gist=${gistId}`;
+        document.getElementById('shareLink').value = shareUrl;
+        document.getElementById('shareLinkBox').classList.add('active');
+        showToast('✅ 上传成功！分享链接已生成');
+        localStorage.setItem('yidong_github_token', token);
+    } catch (error) { showToast('❌ 上传失败：' + error.message); console.error(error); }
+}
+
+async function loadFromGist() {
+    const token = document.getElementById('githubToken').value.trim();
+    if (!token) { showToast('请输入 GitHub Token'); return; }
+    const lastGistId = localStorage.getItem('yidong_last_gist_id');
+    const gistId = prompt('请输入 Gist ID（或留空使用最近的上传）：', lastGistId || '');
+    if (!gistId && !lastGistId) { showToast('请输入 Gist ID'); return; }
+    await loadFromGistById(gistId || lastGistId, token);
+}
+
+async function loadFromGistById(gistId, token) {
+    showToast('正在从云端加载...');
+    try {
+        const headers = { 'Accept': 'application/vnd.github.v3+json' };
+        if (token) headers['Authorization'] = `token ${token}`;
+        const response = await fetch(`https://api.github.com/gists/${gistId}`, { method: 'GET', headers: headers });
+        if (!response.ok) {
+            if (response.status === 404) throw new Error('Gist 不存在或已删除');
+            else if (response.status === 403) throw new Error('访问受限，可能需要 Token');
+            throw new Error('加载失败：' + response.statusText);
+        }
+        const result = await response.json();
+        const fileContent = result.files['attendance.json']?.content;
+        if (!fileContent) throw new Error('Gist 中没有找到考勤数据');
+        const data = JSON.parse(fileContent);
+        if (data.students && data.attendance) {
+            students = data.students;
+            attendanceData = data.attendance;
+            if (!isReadonly) saveData();
+            renderTable();
+            renderBody();
+            localStorage.setItem('yidong_last_gist_id', gistId);
+            showToast('✅ 数据加载成功！');
+            if (isReadonly) document.getElementById('cloudPanel').classList.remove('active');
+        } else { throw new Error('数据格式不正确'); }
+    } catch (error) { showToast('❌ 加载失败：' + error.message); console.error(error); }
+}
+
+function copyShareLink() {
+    const input = document.getElementById('shareLink');
+    input.select(); input.setSelectionRange(0, 99999);
+    try {
+        navigator.clipboard.writeText(input.value).then(() => {
+            document.getElementById('copyTip').style.display = 'inline';
+            setTimeout(() => { document.getElementById('copyTip').style.display = 'none'; }, 2000);
+        });
+    } catch (err) {
+        document.execCommand('copy');
+        document.getElementById('copyTip').style.display = 'inline';
+        setTimeout(() => { document.getElementById('copyTip').style.display = 'none'; }, 2000);
+    }
+}
+
 function showToast(msg) {
     const toast = document.getElementById('toast');
     toast.textContent = msg;
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2000);
+    setTimeout(() => toast.classList.remove('show'), 2500);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const savedToken = localStorage.getItem('yidong_github_token');
+    if (savedToken) document.getElementById('githubToken').value = savedToken;
+    init();
+});
 
 document.getElementById('attendanceModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
-init();
 </script>
 </body>
 </html>
