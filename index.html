@@ -236,7 +236,7 @@ const dates = [
   {date:'2026-05-17',day:17,month:5,weekday:'日',isWeekend:true,isToday:false},
   {date:'2026-05-18',day:18,month:5,weekday:'一',isWeekend:false,isToday:false},
   {date:'2026-05-19',day:19,month:5,weekday:'二',isWeekend:false,isToday:false},
-  {date:'2026-05-20',day:20,month:5,weekday:'三',isWeekend:false,isToday:true},
+  {date:'2026-05-20',day:20,month:5,weekday:'三',isWeekend:false,isToday:false},
   {date:'2026-05-21',day:21,month:5,weekday:'四',isWeekend:false,isToday:false},
   {date:'2026-05-22',day:22,month:5,weekday:'五',isWeekend:false,isToday:false},
   {date:'2026-05-23',day:23,month:5,weekday:'六',isWeekend:true,isToday:false},
@@ -375,6 +375,10 @@ let isReadonly = false;
 let currentGistId = null;
 
 function init() {
+    // ===== 修复1: 动态计算今日日期 =====
+    const today = new Date().toISOString().slice(0, 10);
+    dates.forEach(d => d.isToday = (d.date === today));
+
     // 数据迁移：检查并合并可能存在的旧键名数据
     migrateData();
 
@@ -403,16 +407,14 @@ function migrateData() {
     let currentAttendance = localStorage.getItem('yidong_attendance_v2');
     let migrated = false;
 
-    // 如果当前键没有数据，尝试从旧键迁移
     if (!currentStudents) {
         for (const keys of possibleKeys) {
             const oldStudents = localStorage.getItem(keys.students);
             if (oldStudents) {
                 try {
-                    JSON.parse(oldStudents); // 验证是合法JSON
+                    JSON.parse(oldStudents);
                     localStorage.setItem('yidong_students_v2', oldStudents);
                     migrated = true;
-                    console.log('已迁移学员数据 from:', keys.students);
                     break;
                 } catch (e) {}
             }
@@ -427,7 +429,6 @@ function migrateData() {
                     JSON.parse(oldAttendance);
                     localStorage.setItem('yidong_attendance_v2', oldAttendance);
                     migrated = true;
-                    console.log('已迁移考勤数据 from:', keys.attendance);
                     break;
                 } catch (e) {}
             }
@@ -441,6 +442,9 @@ function migrateData() {
 
 // 从JSON备份文件恢复数据
 function importFromJSON() {
+    // ===== 修复5: 只读模式保护 =====
+    if (isReadonly) return;
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
@@ -542,10 +546,23 @@ function renderBody() {
         });
         bodyHTML += '</tr>';
     });
+
+    // ===== 修复4: 统计行填充实际数据 =====
     bodyHTML += '<tr class="stats-row"><td class="sticky-col" colspan="3">出勤统计</td>';
     dates.forEach(d => {
+        let presentCount = 0, totalSlots = 0;
+        students.forEach(s => {
+            if (!s.name) return;
+            const am = attendanceData[`${s.id}_${d.date}_am`];
+            const pm = attendanceData[`${s.id}_${d.date}_pm`];
+            if (am === 'present' || am === 'late' || am === 'early') presentCount++;
+            if (am) totalSlots++; else if (!d.isWeekend) totalSlots++;
+            if (pm === 'present' || pm === 'late' || pm === 'early') presentCount++;
+            if (pm) totalSlots++; else if (!d.isWeekend) totalSlots++;
+        });
+        const displayCount = totalSlots > 0 ? `${presentCount}/${totalSlots}` : '-';
         const todayClass = d.isToday ? 'today-highlight' : '';
-        bodyHTML += `<td class="${d.isWeekend ? 'weekend' : ''} ${todayClass}">-</td>`;
+        bodyHTML += `<td class="${d.isWeekend ? 'weekend' : ''} ${todayClass}">${displayCount}</td>`;
     });
     bodyHTML += '<td></td></tr>';
     tbody.innerHTML = bodyHTML;
@@ -736,10 +753,11 @@ function exportJSON() {
 }
 
 function exportCSV() {
-    let csv = '﻿序号,姓名';
+    // ===== 修复3: 显式添加 UTF-8 BOM，避免 Excel 乱码 =====
+    const BOM = '\uFEFF';
+    let csv = '序号,姓名';
     dates.forEach(d => { csv += `,${d.date}上午,${d.date}下午`; });
-    csv += '
-';
+    csv += '\n';
     students.forEach((s, idx) => {
         csv += `${idx+1},${s.name || ''}`;
         dates.forEach(d => {
@@ -747,10 +765,9 @@ function exportCSV() {
             const pm = attendanceData[`${s.id}_${d.date}_pm`];
             csv += `,${am ? STATUS_CONFIG[am].symbol : ''},${pm ? STATUS_CONFIG[pm].symbol : ''}`;
         });
-        csv += '
-';
+        csv += '\n';
     });
-    downloadFile(csv, `益东考勤_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;');
+    downloadFile(BOM + csv, `益东考勤_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;');
     showToast('CSV表格已导出');
 }
 
@@ -798,9 +815,11 @@ async function uploadToGist() {
         const response = await fetch('https://api.github.com/gists', {
             method: 'POST',
             headers: {
-                'Authorization': `token ${token}`,
+                // ===== 修复1: GitHub API 认证头改为 Bearer =====
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
-                'Accept': 'application/vnd.github.v3+json'
+                'Accept': 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28'
             },
             body: JSON.stringify({
                 description: '益东煤矿考勤数据',
@@ -812,7 +831,10 @@ async function uploadToGist() {
         const result = await response.json();
         const gistId = result.id;
         currentGistId = gistId;
-        const shareUrl = `${window.location.origin}${window.location.pathname}?gist=${gistId}`;
+        // ===== 修复6: 本地文件兼容性处理 =====
+        const baseUrl = window.location.origin || '';
+        const path = window.location.pathname || '';
+        const shareUrl = baseUrl ? `${baseUrl}${path}?gist=${gistId}` : `?gist=${gistId}`;
         document.getElementById('shareLink').value = shareUrl;
         document.getElementById('shareLinkBox').classList.add('active');
         showToast('✅ 上传成功！分享链接已生成');
@@ -832,8 +854,9 @@ async function loadFromGist() {
 async function loadFromGistById(gistId, token) {
     showToast('正在从云端加载...');
     try {
-        const headers = { 'Accept': 'application/vnd.github.v3+json' };
-        if (token) headers['Authorization'] = `token ${token}`;
+        const headers = { 'Accept': 'application/vnd.github+json' };
+        // ===== 修复1: 加载时也使用 Bearer =====
+        if (token) headers['Authorization'] = `Bearer ${token}`;
         const response = await fetch(`https://api.github.com/gists/${gistId}`, { method: 'GET', headers: headers });
         if (!response.ok) {
             if (response.status === 404) throw new Error('Gist 不存在或已删除');
